@@ -1,4 +1,5 @@
-import Ajv, { type AnySchema, type ValidateFunction } from 'ajv';
+import Ajv2020 from 'ajv/dist/2020.js';
+import type { AnySchema, ValidateFunction } from 'ajv';
 import type { DomainEvent } from './index.js';
 
 export interface VersionedEventSchema {
@@ -10,7 +11,7 @@ export interface VersionedEventSchema {
 function schemaKey(eventType:string,version:number){return `${eventType}@${version}`}
 
 export class EventSchemaRegistry{
-  private readonly ajv=new Ajv({allErrors:true,strict:false});
+  private readonly ajv=new Ajv2020({allErrors:true,strict:false});
   private readonly validators=new Map<string,ValidateFunction>();
   private readonly schemas=new Map<string,AnySchema>();
 
