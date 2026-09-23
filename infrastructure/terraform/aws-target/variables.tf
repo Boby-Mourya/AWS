@@ -5,7 +5,7 @@ variable "vpc_cidr" { type=string default="10.40.0.0/16" }
 variable "az_count" { type=number default=2 validation { condition=var.az_count>=2 && var.az_count<=3 error_message="az_count must be 2 or 3" } }
 variable "enable_nat" { type=bool default=true }
 variable "compute_provider" { type=string default="ecs" validation { condition=contains(["ecs","eks"],var.compute_provider) error_message="compute_provider must be ecs or eks" } }
-variable "container_image" { type=string description="Immutable application image URI (prefer digest)." }
+variable "container_image" { type=string description="Immutable application image URI. Production guardrails require an @sha256 digest." }
 variable "container_port" { type=number default=3000 }
 variable "desired_count" { type=number default=2 }
 variable "cpu" { type=number default=512 }
@@ -13,7 +13,7 @@ variable "memory" { type=number default=1024 }
 variable "health_check_path" { type=string default="/health" }
 variable "alb_certificate_arn" { type=string description="Regional ACM certificate ARN used by the ALB HTTPS listener." }
 variable "domain_name" { type=string default="" }
-variable "origin_domain_name" { type=string default="" description="Optional Route53 name such as origin.example.com covered by the regional ALB certificate. Recommended when CloudFront uses HTTPS to the ALB." }
+variable "origin_domain_name" { type=string default="" description="Route53/DNS origin hostname such as origin.example.com covered by the regional ALB certificate. Required by architecture guardrails for CloudFront HTTPS origin validation." }
 variable "route53_zone_id" { type=string default="" }
 variable "cloudfront_certificate_arn" { type=string default="" description="us-east-1 ACM cert when domain_name is configured." }
 variable "database_name" { type=string default="platform" }
