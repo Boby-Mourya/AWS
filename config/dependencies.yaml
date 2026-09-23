@@ -1,0 +1,12 @@
+dependencies:
+  bullmq:
+    requires: [redis]
+    migration_options: [sqs, rabbitmq, sync]
+  pgvector:
+    requires: [postgres]
+  rag:
+    requires: [ai, vector_store, object_storage]
+  distributed_lock:
+    providers:
+      redis: { requires: [redis] }
+      postgres: { requires: [postgres] }

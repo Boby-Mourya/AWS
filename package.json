@@ -4,11 +4,12 @@
   "version": "0.1.0",
   "workspaces": ["apps/*", "services/*", "packages/*", "adapters/*"],
   "scripts": {
-    "test": "node --test tests/**/*.test.mjs",
+    "test": "tsx --test tests/**/*.test.mjs tests/**/*.test.ts",
     "test:architecture": "node --test tests/architecture/*.test.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
+    "tsx": "^4.19.2",
     "typescript": "^5.7.3"
   }
 }
