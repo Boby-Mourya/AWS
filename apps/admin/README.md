@@ -1,0 +1,2 @@
+# Admin
+Product administration surface.
