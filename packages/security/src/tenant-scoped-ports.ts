@@ -11,15 +11,21 @@ import type {
   ObjectStoragePort,
   SearchPort,
   SearchQuery,
-  SearchResult
+  SearchResult,
+  SecretProvider
 } from '@platform/capability-contracts';
 import type { DomainEvent } from '@platform/domain';
 import type { TenantContext } from './tenant-context.js';
-import { storagePrefix, tenantKey, tenantQueueEnvelope } from './tenant-context.js';
+import { storagePrefix, tenantCredentialPrefix, tenantKey, tenantQueueEnvelope } from './tenant-context.js';
 
 function relativeStorageKey(key:string):string{
   const normalized=key.replace(/^\/+/, '');
   if(!normalized||normalized.split('/').some(part=>part==='..'))throw new Error('INVALID_TENANT_STORAGE_KEY');
+  return normalized;
+}
+function relativeCredentialName(name:string):string{
+  const normalized=name.replace(/^\/+/, '');
+  if(!normalized||normalized.split('/').some(part=>!part||part==='.'||part==='..'))throw new Error('INVALID_TENANT_CREDENTIAL_NAME');
   return normalized;
 }
 
@@ -91,5 +97,12 @@ export class TenantScopedAI implements AIModelPort{
     if(request.workspaceId&&this.ctx.workspaceId&&request.workspaceId!==this.ctx.workspaceId)throw new Error('CROSS_WORKSPACE_AI_DENIED');
     return this.delegate.generate({...request,tenantId:this.ctx.tenantId,workspaceId:this.ctx.workspaceId});
   }
+  health(){return this.delegate.health()}
+}
+
+export class TenantScopedSecretProvider implements SecretProvider{
+  private readonly prefix:string;
+  constructor(private readonly delegate:SecretProvider,private readonly ctx:Pick<TenantContext,'tenantId'|'workspaceId'>){this.prefix=tenantCredentialPrefix(ctx)}
+  get(name:string){return this.delegate.get(`${this.prefix}${relativeCredentialName(name)}`)}
   health(){return this.delegate.health()}
 }
