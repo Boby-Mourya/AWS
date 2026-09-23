@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { resolveDependencyIssues } from '../packages/dependency-engine/src/index.ts';
-import { evaluatePlatformPolicy } from '../packages/policy-engine/src/index.ts';
+import { evaluatePlatformPolicy, isLockedProductionCapability, lockedProductionCapability } from '../packages/policy-engine/src/index.ts';
 import type { DesiredState } from '../packages/config-engine/src/types.ts';
 
 const state = (): DesiredState => ({
@@ -34,4 +34,15 @@ test('production provider switch requires privileged role and approval', () => {
   assert.ok(denied.reasons.includes('PRODUCTION_APPROVAL_REQUIRED'));
   const allowed = evaluatePlatformPolicy({ environment:'production', actorRoles:['platform-admin'], switchClass:'application-provider', operation:'change-provider', capability:'cache', approved:true });
   assert.equal(allowed.allowed, true);
+});
+
+test('locked production controls cannot be disabled, stopped or destroyed through aliases', () => {
+  assert.equal(isLockedProductionCapability('database'), true);
+  assert.equal(lockedProductionCapability('PostgreSQL'), 'primary_persistent_datastore');
+  assert.equal(isLockedProductionCapability('structured-logging'), true);
+  for (const operation of ['disable','stop','destroy'] as const) {
+    const decision = evaluatePlatformPolicy({ environment:'production', actorRoles:['platform-admin'], switchClass:'infrastructure', operation, capability:'database', approved:true });
+    assert.equal(decision.allowed, false);
+    assert.ok(decision.reasons.includes('LOCKED_PRODUCTION_CAPABILITY'));
+  }
 });
