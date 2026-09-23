@@ -1,0 +1,1 @@
+{"name":"@platform/adapter-s3","version":"0.1.0","private":true,"type":"module","exports":"./src/index.ts","dependencies":{"@aws-sdk/client-s3":"^3.731.1","@aws-sdk/s3-request-presigner":"^3.731.1"}}
