@@ -7,4 +7,8 @@ event_bus: { required: false, providers: [kafka, sns-sqs, outbox], fallback: out
 object_storage: { required: true, providers: [s3, minio, filesystem], fallback: filesystem }
 search: { required: false, providers: [opensearch, postgres], fallback: postgres }
 vector_store: { required: false, providers: [pgvector, disabled] }
+email: { required: false, providers: [ses, smtp, disabled], fallback: disabled }
 ai: { required: false, providers: [local-ai, bedrock, external, disabled], fallback: disabled }
+tracing: { required: false, providers: [opentelemetry, disabled], fallback: disabled }
+metrics: { required: false, providers: [opentelemetry, prometheus, cloudwatch, logs], fallback: logs }
+orchestrator: { required: true, providers: [eks, ecs, docker], fallback: ecs }
