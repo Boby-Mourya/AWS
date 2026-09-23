@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://platform.internal/schemas/domain-event-envelope.v1.schema.json",
+  "title": "Domain Event Envelope v1",
+  "type": "object",
+  "required": ["eventId", "eventType", "eventVersion", "timestamp", "tenantId", "correlationId", "source", "data"],
+  "properties": {
+    "eventId": {"type": "string", "minLength": 1},
+    "eventType": {"type": "string", "minLength": 1},
+    "eventVersion": {"type": "integer", "const": 1},
+    "timestamp": {"type": "string", "minLength": 1},
+    "tenantId": {"type": "string", "minLength": 1},
+    "workspaceId": {"type": "string", "minLength": 1},
+    "correlationId": {"type": "string", "minLength": 1},
+    "causationId": {"type": "string", "minLength": 1},
+    "source": {"type": "string", "minLength": 1},
+    "data": {}
+  },
+  "additionalProperties": false
+}
