@@ -2,6 +2,11 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { cookies } from 'next/headers';
 
 export interface WebSession { userId:string; tenantId:string; workspaceId?:string; permissions:string[]; features?:Record<string,boolean>; }
+export const WEB_SESSION_COOKIE_NAME='__Host-session-context';
+
+export function webSessionCookieOptions(maxAge=8*60*60){
+  return{httpOnly:true,secure:true,sameSite:'lax' as const,path:'/',maxAge};
+}
 
 function sessionSecret():string|undefined{
   const secret=process.env.WEB_SESSION_HMAC_SECRET;
@@ -25,8 +30,15 @@ export function encodeWebSessionCookie(session:WebSession,secret=sessionSecret()
   return `${payload}.${signature(payload,secret)}`;
 }
 
+export async function writeWebSession(session:WebSession,maxAge=8*60*60):Promise<void>{
+  const jar=await cookies();jar.set(WEB_SESSION_COOKIE_NAME,encodeWebSessionCookie(session),webSessionCookieOptions(maxAge));
+}
+export async function clearWebSession():Promise<void>{
+  const jar=await cookies();jar.set(WEB_SESSION_COOKIE_NAME,'',{...webSessionCookieOptions(0),maxAge:0});
+}
+
 export async function readWebSession():Promise<WebSession|null>{
-  const jar=await cookies();const encoded=jar.get('__Host-session-context')?.value;if(!encoded)return null;
+  const jar=await cookies();const encoded=jar.get(WEB_SESSION_COOKIE_NAME)?.value;if(!encoded)return null;
   const secret=sessionSecret();const separator=encoded.lastIndexOf('.');
   if(separator>0){
     if(!secret)return null;const payload=encoded.slice(0,separator),presented=encoded.slice(separator+1),expected=signature(payload,secret);
