@@ -8,7 +8,10 @@ import { authenticate } from './auth.js';
 
 declare module 'fastify' { interface FastifyRequest { platformContext: RequestContext } }
 const app=Fastify({logger:true,bodyLimit:1024*1024,requestTimeout:15_000,connectionTimeout:10_000});
-const limiter=new FixedWindowLimiter(Number(process.env.API_RPM ?? 600),60_000);const idempotency=createApiIdempotencyStore();
+const limiter=new FixedWindowLimiter(Number(process.env.API_RPM ?? 600),60_000);
+const configuredDailyQuota=Number(process.env.API_DAILY_QUOTA??0);
+const tenantDailyQuota=Number.isFinite(configuredDailyQuota)&&configuredDailyQuota>0?new FixedWindowLimiter(configuredDailyQuota,86_400_000,'QUOTA_EXCEEDED','Tenant daily request quota exceeded'):null;
+const idempotency=createApiIdempotencyStore();
 const publicPaths=new Set(['/health']);
 
 app.addHook('onRequest',async(request,reply)=>{
@@ -16,6 +19,7 @@ app.addHook('onRequest',async(request,reply)=>{
   reply.header('x-request-id',request.platformContext.requestId).header('x-correlation-id',request.platformContext.correlationId).header('X-Content-Type-Options','nosniff').header('Referrer-Policy','strict-origin-when-cross-origin').header('Permissions-Policy','camera=(), microphone=(), geolocation=()');
   if(!publicPaths.has(request.url.split('?')[0]??''))request.platformContext.tenant=await authenticate(request.headers.authorization);
   const tenantKey=request.platformContext.tenant?.tenantId ?? request.ip;limiter.check(tenantKey);
+  if(request.platformContext.tenant)tenantDailyQuota?.check(request.platformContext.tenant.tenantId);
 });
 app.setErrorHandler((error,request,reply)=>{const requestId=request.platformContext?.requestId??request.id;if(error instanceof ApiError)return reply.code(error.statusCode).send(errorEnvelope(error.code,error.message,requestId));if((error as {validation?:unknown}).validation)return reply.code(400).send(errorEnvelope('VALIDATION_ERROR','Request validation failed',requestId));request.log.error({err:{name:error.name,message:error.message},requestId,tenantId:request.platformContext?.tenant?.tenantId},'request failed');return reply.code(500).send(errorEnvelope('INTERNAL_ERROR','An internal error occurred',requestId));});
 app.get('/health',async()=>{const idem=await idempotency.health();return{status:idem.status==='UNHEALTHY'?'DEGRADED':'HEALTHY',dependencies:{idempotency:idem}}});
