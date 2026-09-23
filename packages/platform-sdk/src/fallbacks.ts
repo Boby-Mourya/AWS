@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { CachePort, EventBusPort, JobQueuePort, ObjectStoragePort, SearchPort, SearchQuery, SearchResult } from '@platform/capability-contracts';
+import type { AIModelPort, AIModelRequest, AIModelResponse, CachePort, EventBusPort, JobQueuePort, ObjectStoragePort, SearchPort, SearchQuery, SearchResult } from '@platform/capability-contracts';
 import type { DomainEvent } from '@platform/domain';
 const healthy=async()=>({status:'HEALTHY' as const,checkedAt:new Date().toISOString()});
 
@@ -17,3 +17,7 @@ export class SyncQueueAdapter implements JobQueuePort{constructor(private readon
 export class InProcessOutboxEventBus implements EventBusPort{readonly events:DomainEvent[]=[];async publish(event:DomainEvent):Promise<void>{this.events.push(event)}health=healthy;}
 export class MemoryObjectStorage implements ObjectStoragePort{private readonly objects=new Map<string,Uint8Array>();async put(key:string,body:Uint8Array):Promise<void>{this.objects.set(key,body.slice())}async get(key:string):Promise<Uint8Array>{const v=this.objects.get(key);if(!v)throw new Error('OBJECT_NOT_FOUND');return v.slice()}async delete(key:string):Promise<void>{this.objects.delete(key)}async signedUrl(key:string,expiresSeconds:number):Promise<string>{return`memory://${encodeURIComponent(key)}?expires=${expiresSeconds}`}health=healthy;}
 export class EmptySearchAdapter implements SearchPort{async search<T>(_query:SearchQuery):Promise<SearchResult<T>>{return{hits:[],tookMs:0}}health=healthy;}
+export class DisabledAIAdapter implements AIModelPort{
+  async generate(_request:AIModelRequest):Promise<AIModelResponse>{throw Object.assign(new Error('AI capability is disabled'),{code:'AI_CAPABILITY_UNAVAILABLE'})}
+  async health(){return{status:'DEGRADED' as const,message:'AI capability disabled by desired state',checkedAt:new Date().toISOString()}}
+}
