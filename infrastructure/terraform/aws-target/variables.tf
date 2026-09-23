@@ -13,6 +13,7 @@ variable "memory" { type=number default=1024 }
 variable "health_check_path" { type=string default="/health" }
 variable "alb_certificate_arn" { type=string description="Regional ACM certificate ARN used by the ALB HTTPS listener." }
 variable "domain_name" { type=string default="" }
+variable "origin_domain_name" { type=string default="" description="Optional Route53 name such as origin.example.com covered by the regional ALB certificate. Recommended when CloudFront uses HTTPS to the ALB." }
 variable "route53_zone_id" { type=string default="" }
 variable "cloudfront_certificate_arn" { type=string default="" description="us-east-1 ACM cert when domain_name is configured." }
 variable "database_name" { type=string default="platform" }
