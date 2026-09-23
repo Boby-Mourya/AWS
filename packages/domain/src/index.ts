@@ -23,3 +23,5 @@ export class DomainError extends Error {
 export type Result<T, E = DomainError> =
   | { ok: true; value: T }
   | { ok: false; error: E };
+
+export * from './event-schema.js';
