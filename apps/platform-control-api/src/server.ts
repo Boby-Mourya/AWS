@@ -5,6 +5,7 @@ import { planSwitch, WorkflowPreconditionError, validatePlatformState, type Desi
 import { isLockedProductionCapability, type Environment } from '../../../packages/policy-engine/src/index.js';
 import type { TenantContext } from '../../../packages/security/src/index.js';
 import { authenticateControlOperator } from './auth.js';
+import { assertSecretMetadataOnly, redactSecretMaterial } from './secret-metadata.js';
 
 declare module 'fastify' { interface FastifyRequest { operator: TenantContext } }
 
@@ -34,8 +35,8 @@ app.put<{Body:DesiredState}>('/v1/control/desired-state',async(request,reply)=>{
 });
 app.get('/v1/control/actual-state',async()=>({actualState:store.getActualState()}));
 
-app.get<{Params:{page:string}}>('/v1/control/pages/:page',async(request,reply)=>{if(!pages.has(request.params.page as ControlPage))return reply.code(404).send({error:{code:'CONTROL_PAGE_NOT_FOUND',message:'Unknown control-center page',requestId:request.id}});return store.getPage(request.params.page as ControlPage)});
-app.put<{Params:{page:string};Body:Record<string,unknown>}>('/v1/control/pages/:page',async(request,reply)=>{if(!pages.has(request.params.page as ControlPage))return reply.code(404).send({error:{code:'CONTROL_PAGE_NOT_FOUND',message:'Unknown control-center page',requestId:request.id}});if(request.params.page==='secrets'&&JSON.stringify(request.body).toLowerCase().includes('secretvalue'))return reply.code(400).send({error:{code:'PLAINTEXT_SECRET_FORBIDDEN',message:'Control Center accepts secret metadata only',requestId:request.id}});store.setPage(request.params.page as ControlPage,request.body,request.operator.userId);return store.getPage(request.params.page as ControlPage)});
+app.get<{Params:{page:string}}>('/v1/control/pages/:page',async(request,reply)=>{if(!pages.has(request.params.page as ControlPage))return reply.code(404).send({error:{code:'CONTROL_PAGE_NOT_FOUND',message:'Unknown control-center page',requestId:request.id}});const snapshot=store.getPage(request.params.page as ControlPage);return request.params.page==='secrets'?{...snapshot,data:redactSecretMaterial(snapshot.data)}:snapshot});
+app.put<{Params:{page:string};Body:Record<string,unknown>}>('/v1/control/pages/:page',async(request,reply)=>{if(!pages.has(request.params.page as ControlPage))return reply.code(404).send({error:{code:'CONTROL_PAGE_NOT_FOUND',message:'Unknown control-center page',requestId:request.id}});if(request.params.page==='secrets')assertSecretMetadataOnly(request.body);store.setPage(request.params.page as ControlPage,request.body,request.operator.userId);const snapshot=store.getPage(request.params.page as ControlPage);return request.params.page==='secrets'?{...snapshot,data:redactSecretMaterial(snapshot.data)}:snapshot});
 
 app.get('/v1/control/changes',async()=>({items:store.listChanges()}));
 app.get<{Params:{id:string}}>('/v1/control/changes/:id',async(request,reply)=>store.getChange(request.params.id)??reply.code(404).send({error:{code:'CHANGE_NOT_FOUND',message:'Change request not found',requestId:request.id}}));
@@ -55,7 +56,7 @@ app.post<{Params:{id:string};Body:{next:ChangeState;note?:string}}>('/v1/control
 
 app.post<{Body:{kind:WorkflowKind;context:WorkflowContext}}>('/v1/control/workflows/preview',async(request,reply)=>{try{const context={...request.body.context,environment,actorRoles:request.operator.roles};return{workflow:planSwitch(request.body.kind,context)}}catch(error){if(error instanceof WorkflowPreconditionError)return reply.code(409).send({error:{code:error.code,message:error.message,requestId:request.id}});throw error}});
 app.get('/v1/control/audit',async()=>({items:store.auditHistory()}));
-app.get('/v1/control/secrets',async()=>store.getPage('secrets'));
+app.get('/v1/control/secrets',async()=>{const snapshot=store.getPage('secrets');return{...snapshot,data:redactSecretMaterial(snapshot.data)}});
 app.post<{Body:{maintenanceMode?:boolean;killSwitch?:string;enabled?:boolean}}>('/v1/control/emergency',async(request)=>{const current=store.getPage('emergency').data;const killSwitches={...((current.killSwitches as Record<string,boolean>|undefined)??{})};if(request.body.killSwitch)killSwitches[request.body.killSwitch]=Boolean(request.body.enabled);const data={...current,maintenanceMode:request.body.maintenanceMode??current.maintenanceMode??false,killSwitches};store.setPage('emergency',data,request.operator.userId);store.recordAudit({type:'emergency.desired-state.updated',actorId:request.operator.userId,data});return store.getPage('emergency')});
 
 if(process.env.NODE_ENV!=='test')app.listen({port:Number(process.env.PORT??4100),host:'0.0.0.0'});
