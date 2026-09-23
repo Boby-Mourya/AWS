@@ -2,7 +2,7 @@ import Fastify from 'fastify';
 import { ChangeStateMachine, operationSemantics, type ChangeState, type ControlOperation } from './change-machine.js';
 import { InMemoryControlStore, type ControlPage } from './store.js';
 import { planSwitch, WorkflowPreconditionError, validatePlatformState, type DesiredState, type WorkflowContext, type WorkflowKind } from '../../../packages/config-engine/src/index.js';
-import type { Environment } from '../../../packages/policy-engine/src/index.js';
+import { isLockedProductionCapability, type Environment } from '../../../packages/policy-engine/src/index.js';
 import type { TenantContext } from '../../../packages/security/src/index.js';
 import { authenticateControlOperator } from './auth.js';
 
@@ -29,8 +29,19 @@ app.put<{Params:{page:string};Body:Record<string,unknown>}>('/v1/control/pages/:
 
 app.get('/v1/control/changes',async()=>({items:store.listChanges()}));
 app.get<{Params:{id:string}}>('/v1/control/changes/:id',async(request,reply)=>store.getChange(request.params.id)??reply.code(404).send({error:{code:'CHANGE_NOT_FOUND',message:'Change request not found',requestId:request.id}}));
-app.post<{Body:{environment:string;operation:ControlOperation;capability:string;desired:Record<string,unknown>}}>('/v1/control/changes',async(request,reply)=>{const body=request.body;const semantics=operationSemantics(body.operation);if(body.operation==='destroy-infrastructure')return reply.code(409).send({error:{code:'DESTRUCTIVE_ACTION_REQUIRES_ORCHESTRATOR',message:semantics.description,requestId:request.id}});const change=machine.create({...body,actorId:request.operator.userId});store.saveChange(change);return reply.code(201).send(change)});
-app.post<{Params:{id:string};Body:{next:ChangeState;note?:string}}>('/v1/control/changes/:id/transition',async(request,reply)=>{const current=store.getChange(request.params.id);if(!current)return reply.code(404).send({error:{code:'CHANGE_NOT_FOUND',message:'Change request not found',requestId:request.id}});let next=machine.transition(current,request.body.next,request.operator.userId,request.body.note);if(request.body.next==='APPROVED')next={...next,approvedBy:request.operator.userId};store.saveChange(next);return next});
+app.post<{Body:{environment?:string;operation:ControlOperation;capability:string;desired:Record<string,unknown>}}>('/v1/control/changes',async(request,reply)=>{
+  const body=request.body;
+  if(body.environment&&body.environment!==environment)return reply.code(409).send({error:{code:'ENVIRONMENT_SCOPE_MISMATCH',message:`Control API is scoped to ${environment}; requested ${body.environment}`,requestId:request.id}});
+  const semantics=operationSemantics(body.operation);
+  if(body.operation==='destroy-infrastructure')return reply.code(409).send({error:{code:'DESTRUCTIVE_ACTION_REQUIRES_ORCHESTRATOR',message:semantics.description,requestId:request.id}});
+  if(environment==='production'&&['disable-capability','stop-infrastructure'].includes(body.operation)&&isLockedProductionCapability(body.capability))return reply.code(409).send({error:{code:'LOCKED_PRODUCTION_CAPABILITY',message:`${body.capability} cannot be disabled or stopped in production`,requestId:request.id}});
+  const change=machine.create({operation:body.operation,capability:body.capability,desired:body.desired,environment,actorId:request.operator.userId});store.saveChange(change);return reply.code(201).send(change)
+});
+app.post<{Params:{id:string};Body:{next:ChangeState;note?:string}}>('/v1/control/changes/:id/transition',async(request,reply)=>{
+  const current=store.getChange(request.params.id);if(!current)return reply.code(404).send({error:{code:'CHANGE_NOT_FOUND',message:'Change request not found',requestId:request.id}});
+  if(current.environment==='production'&&current.state==='IMPACT_ANALYSIS'&&request.body.next==='APPROVED')return reply.code(409).send({error:{code:'PRODUCTION_APPROVAL_STAGE_REQUIRED',message:'Production changes must enter WAITING_APPROVAL before APPROVED',requestId:request.id}});
+  let next=machine.transition(current,request.body.next,request.operator.userId,request.body.note);if(request.body.next==='APPROVED')next={...next,approvedBy:request.operator.userId};store.saveChange(next);return next
+});
 
 app.post<{Body:{kind:WorkflowKind;context:WorkflowContext}}>('/v1/control/workflows/preview',async(request,reply)=>{try{const context={...request.body.context,environment,actorRoles:request.operator.roles};return{workflow:planSwitch(request.body.kind,context)}}catch(error){if(error instanceof WorkflowPreconditionError)return reply.code(409).send({error:{code:error.code,message:error.message,requestId:request.id}});throw error}});
 app.get('/v1/control/audit',async()=>({items:store.auditHistory()}));
