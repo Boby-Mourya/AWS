@@ -90,6 +90,7 @@ export function planOpenSearchOff(ctx: WorkflowContext): SwitchWorkflow {
 
 export function planEksToEcs(ctx: WorkflowContext): SwitchWorkflow {
   requirePlatformRole(ctx);
+  if (ctx.targetComputeHealthy === false) throw new WorkflowPreconditionError('TARGET_COMPUTE_UNHEALTHY','ECS target health must pass before traffic migration.');
   return { kind:'eks-to-ecs',risk:'RED',destructive:false,steps:[
     {id:'1',action:'provision parallel ECS target environment'},
     {id:'2',action:'deploy the exact same immutable application images'},
