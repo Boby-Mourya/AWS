@@ -1,0 +1,4 @@
+CREATE TABLE jobs(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),job_type text NOT NULL,tenant_id uuid NOT NULL,workspace_id uuid,payload jsonb NOT NULL,attempt integer NOT NULL DEFAULT 0,max_attempts integer NOT NULL DEFAULT 5,state text NOT NULL CHECK(state IN('PENDING','RUNNING','COMPLETED','FAILED','RETRYING','DEAD_LETTERED','CANCELLED')),created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now(),correlation_id text NOT NULL,idempotency_key text NOT NULL,UNIQUE(tenant_id,idempotency_key));
+CREATE INDEX jobs_poll_idx ON jobs(state,created_at) WHERE state IN('PENDING','RETRYING');
+ALTER TABLE jobs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_jobs ON jobs USING (tenant_id::text=current_setting('app.tenant_id',true)) WITH CHECK (tenant_id::text=current_setting('app.tenant_id',true));
