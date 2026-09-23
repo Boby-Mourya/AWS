@@ -1,0 +1,16 @@
+{
+  "database":{"primary":"postgres","fallback":null,"disable":"never","criticality":"core"},
+  "cache":{"primary":"redis","fallback":"memory-or-none","disable":"allowed","criticality":"optional"},
+  "distributed_lock":{"primary":"redis","fallback":"postgres","disable":"allowed","criticality":"optional"},
+  "idempotency":{"primary":"redis","fallback":"postgres","disable":"allowed","criticality":"required-behavior"},
+  "queue":{"primary":"sqs","fallback":"sync-local-or-db-designed","disable":"allowed","criticality":"optional-provider"},
+  "event_bus":{"primary":"kafka","fallback":"outbox-sns-sqs","disable":"allowed","criticality":"optional-provider"},
+  "object_storage":{"primary":"s3","fallback":"minio-or-filesystem-nonprod","disable":"provider-swap","criticality":"core"},
+  "search":{"primary":"opensearch","fallback":"postgres","disable":"allowed","criticality":"optional"},
+  "vector_store":{"primary":"pgvector","fallback":"adapter-defined","disable":"rag-off-only","criticality":"feature-dependent"},
+  "email":{"primary":"ses","fallback":"smtp-or-disabled","disable":"allowed","criticality":"optional"},
+  "ai":{"primary":"local-ai","fallback":"bedrock-or-external-or-disabled","disable":"allowed","criticality":"optional"},
+  "tracing":{"primary":"opentelemetry","fallback":"logs-metrics","disable":"allowed","criticality":"optional"},
+  "metrics":{"primary":"otel-prometheus-cloudwatch","fallback":"minimum-service-logs","disable":"allowed","criticality":"operational"},
+  "orchestrator":{"primary":"eks","fallback":"ecs-or-docker","disable":"provider-migration","criticality":"infrastructure"}
+}
