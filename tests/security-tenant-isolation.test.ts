@@ -1,0 +1,4 @@
+import test from 'node:test';import assert from 'node:assert/strict';import { assertTenantResource, authorize, storagePrefix, tenantKey, tenantQueueEnvelope, tenantVectorFilter } from '../packages/security/src/index.ts';
+const ctx={userId:'u1',tenantId:'t1',workspaceId:'w1',roles:['member'],permissions:['document:read'],mfa:false};
+test('all common infrastructure identifiers carry tenant/workspace scope',()=>{assert.match(tenantKey(ctx,'cache','x'),/t1.*w1/);assert.match(storagePrefix(ctx),/t1.*w1/);assert.equal(tenantQueueEnvelope(ctx,{x:1}).tenantId,'t1');assert.deepEqual(tenantVectorFilter(ctx),{tenantId:'t1',workspaceId:'w1'});});
+test('cross-tenant and cross-workspace resource access is rejected',()=>{assert.throws(()=>assertTenantResource(ctx,{tenantId:'t2',workspaceId:'w1'}));assert.throws(()=>assertTenantResource(ctx,{tenantId:'t1',workspaceId:'w2'}));assert.equal(authorize(ctx,{permission:'document:read',resource:{tenantId:'t2'}}),false);});
