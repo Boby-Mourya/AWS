@@ -37,4 +37,7 @@ export async function readWebSession():Promise<WebSession|null>{
 }
 export function hasPermission(session:WebSession|null,permission:string):boolean{return Boolean(session?.permissions.includes(permission))}
 export function hasFeature(session:WebSession|null,feature:string):boolean{return session?.features?.[feature]===true}
-export async function authorizeWebRoute(permission?:string,feature?:string):Promise<WebSession|null>{const session=await readWebSession();if(!session)return null;if(permission&&!hasPermission(session,permission))return null;if(feature&&!hasFeature(session,feature))return null;return session}
+export async function authorizeWebRoute(permission?:string,feature?:string):Promise<WebSession|null>{
+  const session=await readWebSession();if(!session)return null;if(permission&&!hasPermission(session,permission))return null;
+  const effectiveFeature=feature??(permission?.startsWith('feature:')?permission.slice('feature:'.length):undefined);if(effectiveFeature&&!hasFeature(session,effectiveFeature))return null;return session
+}
