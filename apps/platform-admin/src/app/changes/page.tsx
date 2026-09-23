@@ -1,0 +1,13 @@
+import { createControlChange, transitionControlChange } from '../actions';
+import { readControlResource } from '../control-client';
+
+interface ChangeItem { id:string; operation:string; capability:string; state:string; environment:string; actorId:string; updatedAt:string; }
+const transitions=['VALIDATING','IMPACT_ANALYSIS','WAITING_APPROVAL','APPROVED','PROVISIONING','DEPLOYING','VERIFYING','STABILIZING','COMPLETED','FAILED','ROLLING_BACK','ROLLED_BACK'];
+
+export default async function ChangesPage(){
+  const response=await readControlResource('/v1/control/changes');const body=response.data as {items?:ChangeItem[]};const items=Array.isArray(body?.items)?body.items:[];
+  return <><header><p className="eyebrow">CONTROL PLANE</p><h2>Changes</h2><p>Draft, validate, approve, apply and roll back provider or compute changes. Destruction is intentionally unavailable here.</p></header>
+    <section className="card"><h3>Create change request</h3><form action={createControlChange} className="controlForm"><label>Operation<select name="operation" required defaultValue="change-provider"><option value="disable-capability">Disable capability</option><option value="stop-infrastructure">Stop infrastructure</option><option value="change-provider">Change provider</option><option value="compute-migration">Compute migration</option></select></label><label>Capability<input name="capability" required placeholder="cache" /></label><label>Desired state JSON<textarea name="desired" required rows={7} defaultValue={'{"enabled":false,"fallback":"memory"}'} /></label><button type="submit">Create draft</button></form><p className="warning">OFF never means delete. Infrastructure destruction must use the later approved IaC orchestration workflow.</p></section>
+    <section className="card"><h3>Change requests</h3><p>Status: {response.ok?'AVAILABLE':`UNAVAILABLE / ${response.status}`}</p>{items.length===0?<p>No change requests.</p>:<div className="changeList">{items.map(change=><article key={change.id} className="changeItem"><strong>{change.capability} / {change.operation}</strong><p>{change.environment} · {change.state} · {change.updatedAt}</p><code>{change.id}</code><form action={transitionControlChange} className="inlineForm"><input type="hidden" name="id" value={change.id}/><label>Next state<select name="next" defaultValue="VALIDATING">{transitions.map(state=><option key={state} value={state}>{state}</option>)}</select></label><label>Audit note<input name="note" placeholder="Validation passed" /></label><button type="submit">Transition</button></form></article>)}</div>}</section>
+  </>;
+}
