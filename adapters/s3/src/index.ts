@@ -9,10 +9,10 @@ function safeKey(key:string):string {
   if(!normalized || normalized.split('/').some(part=>part==='..')) throw new Error('INVALID_STORAGE_KEY');
   return normalized;
 }
+function safeSegment(value:string,label:string):string{if(!value||value==='.'||value==='..')throw new Error(`${label}_REQUIRED`);return encodeURIComponent(value)}
 
 export function tenantObjectPrefix(tenantId:string,workspaceId?:string):string {
-  if(!tenantId) throw new Error('TENANT_REQUIRED');
-  return `tenants/${safeKey(tenantId)}/${workspaceId?`workspaces/${safeKey(workspaceId)}/`:''}`;
+  return `tenants/${safeSegment(tenantId,'TENANT')}/workspaces/${safeSegment(workspaceId??'_root','WORKSPACE')}/`;
 }
 
 export class S3ObjectStorageAdapter implements ObjectStoragePort {
