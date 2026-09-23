@@ -1,0 +1,1 @@
+{"name":"@platform/adapter-sqs","version":"0.1.0","private":true,"type":"module","exports":"./src/index.ts","dependencies":{"@aws-sdk/client-sqs":"^3.731.1","@aws-sdk/client-sns":"^3.731.1"}}

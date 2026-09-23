@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {WorkerRunner,retryDelayMs} from '../apps/workers/src/runner.ts';
+test('worker retries then dead-letters at max attempts',async()=>{const runner=new WorkerRunner(async()=>{throw new Error('boom')});const base={job_id:'j',job_type:'x',tenant_id:'t',payload:{},max_attempts:2,created_at:new Date().toISOString(),correlation_id:'c',idempotency_key:'i'};assert.equal((await runner.run({...base,attempt:0})).state,'RETRYING');assert.equal((await runner.run({...base,attempt:1})).state,'DEAD_LETTERED');});
+test('retry uses exponential backoff with jitter bounds',()=>{const a=retryDelayMs(1,100,10000),b=retryDelayMs(3,100,10000);assert.ok(a>=100&&a<120);assert.ok(b>=400&&b<480);});
