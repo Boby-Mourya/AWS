@@ -1,16 +1,17 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { cookies } from 'next/headers';
 
-export interface WebSession { userId:string; tenantId:string; workspaceId?:string; permissions:string[]; }
+export interface WebSession { userId:string; tenantId:string; workspaceId?:string; permissions:string[]; features?:Record<string,boolean>; }
 
 function sessionSecret():string|undefined{
   const secret=process.env.WEB_SESSION_HMAC_SECRET;
   if(process.env.NODE_ENV==='production'&&(!secret||secret.length<32))throw new Error('WEB_SESSION_HMAC_SECRET must be at least 32 characters in production');
   return secret;
 }
+function validFeatureMap(value:unknown):boolean{return value===undefined||(Boolean(value)&&typeof value==='object'&&Object.values(value as Record<string,unknown>).every(enabled=>typeof enabled==='boolean'))}
 function validSession(value:unknown):value is WebSession{
   if(!value||typeof value!=='object')return false;const session=value as Partial<WebSession>;
-  return typeof session.userId==='string'&&session.userId.length>0&&typeof session.tenantId==='string'&&session.tenantId.length>0&&(session.workspaceId===undefined||typeof session.workspaceId==='string')&&Array.isArray(session.permissions)&&session.permissions.every(permission=>typeof permission==='string');
+  return typeof session.userId==='string'&&session.userId.length>0&&typeof session.tenantId==='string'&&session.tenantId.length>0&&(session.workspaceId===undefined||typeof session.workspaceId==='string')&&Array.isArray(session.permissions)&&session.permissions.every(permission=>typeof permission==='string')&&validFeatureMap(session.features);
 }
 function signature(payload:string,secret:string):string{return createHmac('sha256',secret).update(payload).digest('base64url')}
 function decodePayload(payload:string):WebSession|null{
@@ -35,4 +36,5 @@ export async function readWebSession():Promise<WebSession|null>{
   return decodePayload(encoded);
 }
 export function hasPermission(session:WebSession|null,permission:string):boolean{return Boolean(session?.permissions.includes(permission))}
-export async function authorizeWebRoute(permission?:string):Promise<WebSession|null>{const session=await readWebSession();if(!session)return null;if(permission&&!hasPermission(session,permission))return null;return session}
+export function hasFeature(session:WebSession|null,feature:string):boolean{return session?.features?.[feature]===true}
+export async function authorizeWebRoute(permission?:string,feature?:string):Promise<WebSession|null>{const session=await readWebSession();if(!session)return null;if(permission&&!hasPermission(session,permission))return null;if(feature&&!hasFeature(session,feature))return null;return session}
