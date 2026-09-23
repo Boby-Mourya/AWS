@@ -1,0 +1,12 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+
+const tf=new URL('../infrastructure/terraform/aws-target/main.tf',import.meta.url);
+const vars=new URL('../infrastructure/terraform/aws-target/variables.tf',import.meta.url);
+
+test('AWS target includes edge, private compute and isolated managed data services',async()=>{const s=await readFile(tf,'utf8');for(const token of ['aws_cloudfront_distribution','aws_wafv2_web_acl','aws_lb\" \"app','aws_ecs_service','aws_eks_cluster','aws_db_instance','aws_s3_bucket_public_access_block','aws_sqs_queue','aws_vpc_endpoint','aws_kms_key'])assert.ok(s.includes(token),`missing ${token}`);assert.ok(s.includes('endpoint_public_access=false'));assert.ok(s.includes('map_public_ip_on_launch=true'));assert.ok(s.includes('Tier=\"isolated-data\"'))});
+
+test('AWS target keeps optional infrastructure optional and avoids admin workload policy',async()=>{const [s,v]=await Promise.all([readFile(tf,'utf8'),readFile(vars,'utf8')]);for(const flag of ['redis_enabled','opensearch_enabled','msk_enabled','compute_provider'])assert.ok(v.includes(`variable \"${flag}\"`));assert.equal(s.includes('AdministratorAccess'),false);assert.ok(s.includes('transit_encryption_enabled=true'));assert.ok(s.includes('enforce_https=true'))});
+
+test('AWS target includes security evidence and backup controls',async()=>{const s=await readFile(tf,'utf8');for(const token of ['aws_guardduty_detector','aws_securityhub_account','aws_cloudtrail','enable_log_file_validation=true','aws_backup_plan','deletion_protection=var.environment==\"production\"'])assert.ok(s.includes(token),`missing ${token}`)});
