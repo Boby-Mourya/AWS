@@ -1,0 +1,1 @@
+export function objectValidator<T extends object>(requiredKeys:(keyof T)[]){ return (value:unknown):T => { if(!value || typeof value!=='object') throw new Error('INVALID_RESPONSE'); for(const key of requiredKeys) if(!(key in value)) throw new Error(`INVALID_RESPONSE:${String(key)}`); return value as T; }; }
