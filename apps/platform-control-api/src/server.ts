@@ -14,6 +14,7 @@ const store=new InMemoryControlStore();
 const environment=(process.env.PLATFORM_ENV??'development') as Environment;
 const region=process.env.AWS_REGION??'ap-south-1';
 const pages=new Set<ControlPage>(['overview','capabilities','features','providers','environments','dependencies','infrastructure','deployments','health','observability','security','secrets','costs','backup-dr','drift','emergency']);
+const approvedMutationStates=new Set<ChangeState>(['APPROVED','PROVISIONING','DEPLOYING','VERIFYING','STABILIZING','COMPLETED']);
 
 app.addHook('onRequest',async(request)=>{if(request.url.split('?')[0]==='/health')return;request.operator=await authenticateControlOperator(request.headers.authorization)});
 app.setErrorHandler((error,request,reply)=>{const status=(error as {statusCode?:number}).statusCode??500;const code=(error as {code?:string}).code??(status>=500?'INTERNAL_ERROR':'CONTROL_REQUEST_REJECTED');if(status>=500)request.log.error({err:error},'control request failed');return reply.code(status).send({error:{code,message:status>=500?'Control-plane request failed':error.message,requestId:request.id}})});
@@ -21,7 +22,16 @@ app.setErrorHandler((error,request,reply)=>{const status=(error as {statusCode?:
 app.get('/health',async()=>({status:'HEALTHY',service:'platform-control-api'}));
 app.get('/v1/control/overview',async()=>({environment,region,configVersion:store.getConfigVersion(),...store.getPage('overview').data,updatedAt:store.getPage('overview').updatedAt}));
 app.get('/v1/control/desired-state',async()=>({configVersion:store.getConfigVersion(),desiredState:store.getDesiredState()}));
-app.put<{Body:DesiredState}>('/v1/control/desired-state',async(request,reply)=>{const result=validatePlatformState(request.body,environment);if(!result.valid)return reply.code(409).send({error:{code:'INVALID_DESIRED_STATE',message:'Desired state failed schema, dependency or locked-capability validation',requestId:request.id},details:result});store.setDesiredState(request.body as unknown as Record<string,unknown>,request.operator.userId);return{configVersion:store.getConfigVersion(),desiredState:store.getDesiredState()}});
+app.put<{Body:DesiredState}>('/v1/control/desired-state',async(request,reply)=>{
+  const result=validatePlatformState(request.body,environment);if(!result.valid)return reply.code(409).send({error:{code:'INVALID_DESIRED_STATE',message:'Desired state failed schema, dependency or locked-capability validation',requestId:request.id},details:result});
+  let changeId:string|undefined;
+  if(environment==='production'){
+    const header=request.headers['x-control-change-id'];changeId=Array.isArray(header)?header[0]:header;
+    const change=changeId?store.getChange(changeId):undefined;
+    if(!change||change.environment!=='production'||!change.approvedBy||!approvedMutationStates.has(change.state))return reply.code(409).send({error:{code:'APPROVED_PRODUCTION_CHANGE_REQUIRED',message:'Production desired-state changes require an approved control-plane change request.',requestId:request.id}});
+  }
+  store.setDesiredState(request.body as unknown as Record<string,unknown>,request.operator.userId);if(changeId)store.recordAudit({type:'desired-state.applied-from-change',changeId,actorId:request.operator.userId});return{configVersion:store.getConfigVersion(),desiredState:store.getDesiredState()}
+});
 app.get('/v1/control/actual-state',async()=>({actualState:store.getActualState()}));
 
 app.get<{Params:{page:string}}>('/v1/control/pages/:page',async(request,reply)=>{if(!pages.has(request.params.page as ControlPage))return reply.code(404).send({error:{code:'CONTROL_PAGE_NOT_FOUND',message:'Unknown control-center page',requestId:request.id}});return store.getPage(request.params.page as ControlPage)});
