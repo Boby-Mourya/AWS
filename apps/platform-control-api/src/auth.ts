@@ -10,6 +10,7 @@ export async function authenticateControlOperator(authorization:string|undefined
   try{
     const token=authorization.slice(7);const ctx=verifier?await verifier.verify(token):devTenantContext(token);
     if(!ctx.roles.some(role=>privilegedRoles.has(role)))throw Object.assign(new Error('Privileged platform role is required'),{statusCode:403,code:'PLATFORM_ROLE_REQUIRED'});
+    if(!ctx.mfa)throw Object.assign(new Error('Multi-factor authentication is required for privileged platform roles'),{statusCode:403,code:'MFA_REQUIRED_FOR_PRIVILEGED_ROLE'});
     return ctx;
   }catch(error){
     if((error as {statusCode?:number}).statusCode)throw error;
