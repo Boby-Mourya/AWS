@@ -1,6 +1,7 @@
 import Fastify from 'fastify';
 import { ChangeStateMachine, operationSemantics, type ControlOperation } from './change-machine.js';
 import { InMemoryControlStore } from './store.js';
+import { planSwitch, WorkflowPreconditionError, type WorkflowContext, type WorkflowKind } from '../../../packages/config-engine/src/workflows.js';
 
 const app = Fastify({ logger: true, bodyLimit: 1024 * 256 });
 const machine = new ChangeStateMachine();
@@ -16,6 +17,13 @@ app.post<{Body:{environment:string;actorId:string;operation:ControlOperation;cap
   const change = machine.create({ ...body });
   store.saveChange(change);
   return reply.code(201).send(change);
+});
+app.post<{Body:{kind:WorkflowKind;context:WorkflowContext}}>('/v1/control/workflows/preview', async (request, reply) => {
+  try { return { workflow:planSwitch(request.body.kind, request.body.context) }; }
+  catch (error) {
+    if (error instanceof WorkflowPreconditionError) return reply.code(409).send({error:{code:error.code,message:error.message,requestId:request.id}});
+    throw error;
+  }
 });
 app.get('/v1/control/audit', async () => ({ items:store.auditHistory() }));
 app.get('/v1/control/secrets', async () => ({ items:[], note:'Only secret metadata is exposed. Plaintext values are never returned.' }));
