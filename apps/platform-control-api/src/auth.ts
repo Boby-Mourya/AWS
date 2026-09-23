@@ -17,3 +17,7 @@ export async function authenticateControlOperator(authorization:string|undefined
     throw Object.assign(new Error('Authentication token is invalid or does not satisfy control-plane policy'),{statusCode:401,code:'INVALID_TOKEN'});
   }
 }
+
+export function requireControlWrite(ctx:TenantContext):void{
+  if(!ctx.permissions.includes('platform:write')&&!ctx.permissions.includes('*'))throw Object.assign(new Error('Platform write permission is required'),{statusCode:403,code:'PLATFORM_WRITE_PERMISSION_REQUIRED'});
+}
