@@ -1,0 +1,1 @@
+{"name":"@platform/adapter-ai","version":"0.1.0","private":true,"type":"module","exports":"./src/index.ts","dependencies":{"@aws-sdk/client-bedrock-runtime":"^3.731.1"}}
