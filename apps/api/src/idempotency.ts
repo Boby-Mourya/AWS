@@ -17,7 +17,10 @@ function decode(value:Uint8Array):StoredResponse{
 export class MemoryIdempotencyPort implements IdempotencyPort{
   private readonly entries=new Map<string,{value:Uint8Array;expiresAt:number}>();
   async get(key:string):Promise<Uint8Array|null>{const entry=this.entries.get(key);if(!entry)return null;if(entry.expiresAt<=Date.now()){this.entries.delete(key);return null}return entry.value.slice()}
-  async putIfAbsent(key:string,value:Uint8Array,ttlSeconds:number):Promise<boolean>{const current=await this.get(key);if(current)return false;this.entries.set(key,{value:value.slice(),expiresAt:Date.now()+ttlSeconds*1000});return true}
+  async putIfAbsent(key:string,value:Uint8Array,ttlSeconds:number):Promise<boolean>{
+    const current=this.entries.get(key);if(current&&current.expiresAt>Date.now())return false;if(current)this.entries.delete(key);
+    this.entries.set(key,{value:value.slice(),expiresAt:Date.now()+Math.max(0,ttlSeconds)*1000});return true
+  }
   async health(){return{status:'HEALTHY' as const,checkedAt:new Date().toISOString()}}
 }
 
