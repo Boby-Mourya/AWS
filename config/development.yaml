@@ -1,0 +1,6 @@
+platform:
+  profile: local
+  cache: { enabled: true, provider: memory, fallback: none }
+  queue: { enabled: true, provider: sync, fallback: sync }
+  event_bus: { enabled: true, provider: outbox, fallback: outbox }
+  object_storage: { enabled: true, provider: filesystem, fallback: filesystem }

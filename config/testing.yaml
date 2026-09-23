@@ -1,0 +1,5 @@
+platform:
+  profile: local
+  cache: { enabled: false, provider: none, fallback: none }
+  queue: { enabled: true, provider: sync, fallback: sync }
+  event_bus: { enabled: true, provider: outbox, fallback: outbox }

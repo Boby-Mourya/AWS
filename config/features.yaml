@@ -1,0 +1,5 @@
+features:
+  rag: { default: false }
+  whatsapp: { default: true }
+  analytics: { default: true }
+  workflow: { default: false }

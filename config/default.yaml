@@ -1,0 +1,15 @@
+platform:
+  profile: local
+  database: { enabled: true, provider: postgres, required: true }
+  cache: { enabled: true, provider: memory, fallback: none }
+  distributed_lock: { enabled: true, provider: postgres, fallback: postgres }
+  idempotency: { enabled: true, provider: postgres, fallback: postgres, required: true }
+  queue: { enabled: true, provider: sync, fallback: sync }
+  event_bus: { enabled: true, provider: outbox, fallback: outbox }
+  object_storage: { enabled: true, provider: filesystem, fallback: filesystem, required: true }
+  vector_store: { enabled: false, provider: disabled }
+  search: { enabled: true, provider: postgres, fallback: postgres }
+  ai: { enabled: true, provider: local-ai, fallback: disabled }
+  observability: { metrics: true, tracing: false, logging: true }
+features: { rag: false, whatsapp: true, analytics: true, workflow: false }
+limits: { apiRequestsPerMinute: 120, uploadMegabytes: 25, aiTokensPerRequest: 4096 }

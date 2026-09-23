@@ -1,0 +1,15 @@
+platform:
+  profile: enterprise
+  database: { enabled: true, provider: postgres, required: true }
+  cache: { enabled: true, provider: redis, fallback: memory }
+  distributed_lock: { enabled: true, provider: redis, fallback: postgres }
+  idempotency: { enabled: true, provider: redis, fallback: postgres, required: true }
+  queue: { enabled: true, provider: sqs, fallback: sync }
+  event_bus: { enabled: true, provider: kafka, fallback: outbox }
+  object_storage: { enabled: true, provider: s3, fallback: filesystem, required: true }
+  vector_store: { enabled: true, provider: pgvector }
+  search: { enabled: false, provider: opensearch, fallback: postgres }
+  ai: { enabled: true, provider: local-ai, fallback: bedrock }
+  observability: { metrics: true, tracing: true, logging: true }
+features: { rag: true, whatsapp: true, analytics: true, workflow: false }
+limits: { apiRequestsPerMinute: 600, uploadMegabytes: 100, aiTokensPerRequest: 8192 }

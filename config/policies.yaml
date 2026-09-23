@@ -1,0 +1,4 @@
+production:
+  approvalRequiredFor: [application-provider, infrastructure, compute-migration]
+  locked: [authentication, authorization, tenant_isolation, database, encryption, secret_handling, audit, structured_logging, input_validation, backup_policy, migrations, configuration_validation]
+  destructiveOffSwitch: false

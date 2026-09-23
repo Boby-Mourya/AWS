@@ -1,0 +1,8 @@
+defaults:
+  apiRequestsPerMinute: 120
+  uploadMegabytes: 25
+  aiTokensPerRequest: 4096
+production:
+  apiRequestsPerMinute: 600
+  uploadMegabytes: 100
+  aiTokensPerRequest: 8192

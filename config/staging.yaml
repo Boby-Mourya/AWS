@@ -1,0 +1,7 @@
+platform:
+  profile: standard
+  cache: { enabled: true, provider: redis, fallback: memory }
+  queue: { enabled: true, provider: sqs, fallback: sync }
+  event_bus: { enabled: true, provider: outbox, fallback: outbox }
+  object_storage: { enabled: true, provider: s3, fallback: filesystem }
+  search: { enabled: true, provider: postgres, fallback: postgres }

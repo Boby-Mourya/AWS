@@ -1,0 +1,10 @@
+database: { required: true, providers: [postgres] }
+cache: { required: false, providers: [redis, memory, none], fallback: memory }
+distributed_lock: { required: false, providers: [redis, postgres], fallback: postgres }
+idempotency: { required: true, providers: [redis, postgres], fallback: postgres }
+queue: { required: false, providers: [sqs, bullmq, rabbitmq, sync], fallback: sync }
+event_bus: { required: false, providers: [kafka, sns-sqs, outbox], fallback: outbox }
+object_storage: { required: true, providers: [s3, minio, filesystem], fallback: filesystem }
+search: { required: false, providers: [opensearch, postgres], fallback: postgres }
+vector_store: { required: false, providers: [pgvector, disabled] }
+ai: { required: false, providers: [local-ai, bedrock, external, disabled], fallback: disabled }
