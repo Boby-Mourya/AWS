@@ -1,0 +1,20 @@
+export const sections = [
+  ['overview','Overview','Platform health, current profile, versions, drift and critical alerts'],
+  ['capabilities','Capabilities','On/off state, provider, fallback, required/optional and risk'],
+  ['features','Features','Product feature flags and tenant/workspace overrides'],
+  ['providers','Providers','Provider catalog and provider health'],
+  ['environments','Environments','DEV/TEST/STAGING/PROD scoped configuration'],
+  ['dependencies','Dependencies','Interactive dependency graph and conflicts'],
+  ['infrastructure','Infrastructure','AWS resources and desired/actual state'],
+  ['deployments','Deployments','Release versions and canary/rolling state'],
+  ['changes','Changes','Draft, validate, approve, apply and rollback'],
+  ['health','Health','Dependencies, workers, queues, DLQ and integrations'],
+  ['observability','Observability','Metrics, logs, traces and SLOs'],
+  ['security','Security','Security posture and critical findings'],
+  ['secrets','Secrets','Secret metadata and rotation only; never plaintext values'],
+  ['costs','Costs','Resource and service cost trends'],
+  ['backup-dr','Backup & DR','RPO/RTO, backup status and restore tests'],
+  ['drift','Drift','Git/Terraform desired state versus AWS actual state'],
+  ['audit','Audit','Immutable control-plane history'],
+  ['emergency','Emergency','Scoped kill switches and maintenance mode']
+].map(([slug,title,responsibility])=>({slug,title,responsibility}));
