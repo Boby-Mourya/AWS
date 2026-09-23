@@ -24,9 +24,13 @@ test('OpenSearch uses shadow validation before cutover', () => {
   assert.match(plan.steps[1]!.action,/shadow/i);
 });
 
-test('EKS to ECS is progressive migration and AI disable degrades cleanly', () => {
-  const compute = planEksToEcs(base);
+test('EKS to ECS blocks unhealthy targets then uses progressive migration', () => {
+  assert.throws(()=>planEksToEcs({...base,targetComputeHealthy:false}),/TARGET_COMPUTE_UNHEALTHY/);
+  const compute = planEksToEcs({...base,targetComputeHealthy:true});
   assert.deepEqual(compute.steps.filter(s=>s.action.includes('shift traffic')).map(s=>s.action.match(/\d+%/)?.[0]),['5%','25%','50%','100%']);
+});
+
+test('AI disable degrades cleanly', () => {
   const ai = planAiChange(base,true);
   assert.ok(ai.steps.some(s=>s.action.includes('CAPABILITY_UNAVAILABLE')));
 });
